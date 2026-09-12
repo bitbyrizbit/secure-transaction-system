@@ -3,9 +3,10 @@ import { TransactionType } from "@prisma/client";
 
 export const createTransactionSchema = z.object({
   amount: z.number().positive("Amount must be greater than 0"),
-  type: z.nativeEnum(TransactionType, {
-    errorMap: () => ({ message: "Invalid transaction type" }),
-  }),
+  type: z.enum(
+    Object.values(TransactionType) as [TransactionType, ...TransactionType[]],
+    { message: "Invalid transaction type" }
+  ),
   description: z.string().max(255, "Description is too long").optional(),
 });
 

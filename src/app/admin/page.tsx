@@ -7,7 +7,7 @@ export default async function AdminPage() {
   let ctx;
   try {
     ctx = await getTenantContext();
-  } catch (e) {
+  } catch {
     redirect("/login");
   }
 

@@ -58,9 +58,10 @@ export async function createTransactionAction(input: CreateTransactionInput) {
     });
 
     return { success: true, transaction: result.transaction };
-  } catch (error: any) {
-    if (error.message === "FORBIDDEN") return { error: "Forbidden" };
-    if (error.message === "UNAUTHORIZED" || error.message === "USER_NOT_FOUND") return { error: "Unauthorized" };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "";
+    if (msg === "FORBIDDEN") return { error: "Forbidden" };
+    if (msg === "UNAUTHORIZED" || msg === "USER_NOT_FOUND") return { error: "Unauthorized" };
     return { error: "Internal Server Error" };
   }
 }

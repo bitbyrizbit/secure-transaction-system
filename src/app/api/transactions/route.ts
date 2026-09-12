@@ -14,8 +14,9 @@ export async function GET() {
       });
     });
     return NextResponse.json(transactions);
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: error.message === "FORBIDDEN" ? 403 : 401 });
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Unauthorized";
+    return NextResponse.json({ error: msg }, { status: msg === "FORBIDDEN" ? 403 : 401 });
   }
 }
 
@@ -73,9 +74,10 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ success: true, transaction: result.transaction }, { status: 201 });
-  } catch (error: any) {
-    if (error.message === "FORBIDDEN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    if (error.message === "UNAUTHORIZED" || error.message === "USER_NOT_FOUND") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "";
+    if (msg === "FORBIDDEN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (msg === "UNAUTHORIZED" || msg === "USER_NOT_FOUND") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

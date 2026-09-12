@@ -1,0 +1,169 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// Enums
+// ─────────────────────────────────────────────
+
+enum RoleName {
+  ADMIN
+  MEMBER
+  GUEST
+}
+
+enum TransactionType {
+  CREDIT
+  DEBIT
+  TRANSFER
+  REFUND
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+// ─────────────────────────────────────────────
+// Organization — the multi-tenant root
+// ─────────────────────────────────────────────
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  users        User[]
+  transactions Transaction[]
+  auditLogs    AuditLog[]
+
+  @@index([name])
+}
+
+// ─────────────────────────────────────────────
+// Role — lookup table for access levels
+// ─────────────────────────────────────────────
+
+model Role {
+  id   String   @id @default(cuid())
+  name RoleName @unique
+
+  // Relations
+  users User[]
+}
+
+// ─────────────────────────────────────────────
+// User — authenticated principal within a tenant
+// ─────────────────────────────────────────────
+
+model User {
+  id             String   @id @default(cuid())
+  name           String
+  email          String   @unique
+  emailVerified  Boolean  @default(false)
+  image          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Foreign keys
+  organizationId String
+  roleId         String
+
+  // Relations
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  role         Role          @relation(fields: [roleId], references: [id])
+  transactions Transaction[]
+  auditLogs    AuditLog[]
+
+  @@index([email])
+  @@index([organizationId])
+  @@index([roleId])
+}
+
+// ─────────────────────────────────────────────
+// Transaction — financial record within a tenant
+// ─────────────────────────────────────────────
+
+model Transaction {
+  id          String            @id @default(cuid())
+  amount      Decimal           @db.Decimal(19, 4)
+  type        TransactionType
+  status      TransactionStatus @default(PENDING)
+  description String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Foreign keys
+  organizationId String
+  userId         String
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  auditLogs    AuditLog[]
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────
+// AuditLog — immutable record of system actions
+// ─────────────────────────────────────────────
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String
+  entity    String
+  entityId  String
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  // Foreign keys
+  organizationId String
+  userId         String
+  transactionId  String?
+
+  // Relations
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transaction  Transaction?  @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────
+// EmailEvent — lifecycle events from Resend webhooks
+// ─────────────────────────────────────────────
+
+model EmailEvent {
+  id        String   @id @default(cuid())
+  emailId   String   // Resend message ID
+  eventType String   // e.g., "email.sent", "email.delivered", "email.bounced"
+  recipient String
+  subject   String?
+  payload   Json
+  createdAt DateTime @default(now())
+
+  @@index([emailId])
+  @@index([recipient])
+  @@index([eventType])
+  @@index([createdAt])
+}

@@ -86,6 +86,8 @@ model User {
   role         Role          @relation(fields: [roleId], references: [id])
   transactions Transaction[]
   auditLogs    AuditLog[]
+  sessions     Session[]
+  accounts     Account[]
 
   @@index([email])
   @@index([organizationId])
@@ -166,4 +168,41 @@ model EmailEvent {
   @@index([recipient])
   @@index([eventType])
   @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────
+// Better Auth required models
+// ─────────────────────────────────────────────
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Account {
+  id           String    @id @default(cuid())
+  accountId    String
+  providerId   String
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken  String?
+  refreshToken String?
+  idToken      String?
+  expiresAt    DateTime?
+  password     String?
+
+  @@index([userId])
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
 }
